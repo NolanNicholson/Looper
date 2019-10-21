@@ -48,7 +48,7 @@ class MusicFile:
             arr = 0.5 * (arr[::2] + arr[1::2])
 
             # Perform the Fourier transform
-            frame_fft = np.fft.rfft(arr)
+            frame_fft = np.abs(np.fft.rfft(arr))
             frame_ffts.append(frame_fft)
 
         # Convert the list of ffts to a numpy.ndarray (easier to work with)
@@ -66,10 +66,14 @@ class MusicFile:
         frame_freq_sub = frame_freq[clip_start:clip_end]
         fft_2d_sub = fft_2d[:, clip_start:clip_end]
 
+        # Mask out low-amplitude frequencies so that we don't match to noise
+        fft_2d_denoise = np.ma.masked_where(
+            (fft_2d_sub.T < 0.5e7), fft_2d_sub.T, 0)
+
         # Finally, get the dominant frequency for each frame
         # (and mask it to omit any points where the dominant frequency is
         # just the baseline frequency)
-        max_freq = frame_freq_sub[np.argmax(fft_2d_sub.T, axis=0)]
+        max_freq = frame_freq_sub[np.argmax(fft_2d_denoise, axis=0)]
         self.max_freq = np.ma.masked_where(max_freq == frame_freq_sub[0],
                 max_freq)
 
@@ -93,15 +97,18 @@ class MusicFile:
         # especially for cases where the loop point is not totally clear
 
         max_corr = 0
-        best_offset = None
+        best_start = None
+        best_end = None
 
-        for offset in range(start_offset + 5, len(self.max_freq) - test_len):
-            sc = self.sig_corr(start_offset, offset, test_len)
-            if sc > max_corr:
-                best_offset = offset
-                max_corr = sc
+        for start in range(200, len(self.max_freq) - test_len, 500):
+            for end in range(start + 500, len(self.max_freq) - test_len):
+                sc = self.sig_corr(start, end, test_len)
+                if sc > max_corr:
+                    best_start = start
+                    best_end = end
+                    max_corr = sc
 
-        return (start_offset, best_offset)
+        return (best_start, best_end, max_corr)
 
     def time_of_frame(self, frame):
         samples_per_sec = self.rate * self.channels
@@ -137,10 +144,11 @@ def loop_track(filename):
         print("Loading {}...".format(filename))
         track = MusicFile(filename)
         track.calculate_max_frequencies()
-        start_offset, best_offset = track.find_loop_point()
-        print("Playing with loop from {} back to {}".format(
+        start_offset, best_offset, best_corr = track.find_loop_point()
+        print("Playing with loop from {} back to {} ({:.0f}% match)".format(
             track.time_of_frame(best_offset),
-            track.time_of_frame(start_offset)))
+            track.time_of_frame(start_offset),
+            best_corr * 100))
         print("(press Ctrl+C to exit)")
         track.play_looping(start_offset, best_offset)
 
