@@ -65,8 +65,11 @@ class MusicFile:
         fft_2d_sub = fft_2d[:, clip_start:clip_end]
 
         # Mask out low-amplitude frequencies so that we don't match to noise
+        # (this is done on a proportional threshold
+        # since absolute magnitudes vary)
         fft_2d_denoise = np.ma.masked_where(
-            (fft_2d_sub.T < 0.5e7), fft_2d_sub.T, 0)
+            (fft_2d_sub.T < fft_2d_sub.max() * 0.25),
+            fft_2d_sub.T, 0)
 
         # Finally, get the dominant frequency for each frame
         # (and mask it to omit any points where the dominant frequency is
