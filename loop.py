@@ -89,6 +89,16 @@ class MusicFile:
                 self.max_freq[s1:s1+comp_length],
                 self.max_freq[s2:s2+comp_length])[1, 0]
 
+    def pct_match(self, s1, s2, comp_length):
+        """Calculates the percentage of matching notes between
+        two subsamples of self.max_freq, each one comp_length notes long,
+        one starting at s1 and one starting at s2
+        """
+
+        matches = (self.max_freq[s1:s1+comp_length] ==
+                self.max_freq[s2:s2+comp_length])
+        return np.ma.sum(matches) / np.ma.count(matches)
+
     def find_loop_point(self, start_offset=200, test_len=500):
         """Finds matches based on auto-correlation over a portion
         of the music track."""
@@ -101,9 +111,10 @@ class MusicFile:
         best_start = None
         best_end = None
 
-        for start in range(200, len(self.max_freq) - test_len, 500):
+        for start in range(200, len(self.max_freq) - test_len,
+                int(len(self.max_freq) / 10)):
             for end in range(start + 500, len(self.max_freq) - test_len):
-                sc = self.sig_corr(start, end, test_len)
+                sc = self.pct_match(start, end, test_len)
                 if sc > max_corr:
                     best_start = start
                     best_end = end
