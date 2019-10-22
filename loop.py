@@ -41,11 +41,9 @@ class MusicFile:
             # for the files tested, but won't necessarily always be true
             arr = np.frombuffer(self.frames[i], dtype=np.uint16)
 
-            # Average the left and right channels so we only have
+            # Take just the first channel, so that we only need
             # to work with one time series
-            # (NOTE: this assumes 2 channels, which was true
-            # for the files tested, but won't necessarily always be true
-            arr = 0.5 * (arr[::2] + arr[1::2])
+            arr = arr[::self.channels]
 
             # Perform the Fourier transform
             frame_fft = np.abs(np.fft.rfft(arr))
@@ -135,7 +133,7 @@ class MusicFile:
                 if i == loop_offset:
                     i = start_offset
         except KeyboardInterrupt:
-            pass
+            print() # so that the program ends on a newline
 
 
 def loop_track(filename):
