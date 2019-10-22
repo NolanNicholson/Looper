@@ -31,9 +31,9 @@ class MusicFile:
         # Fourier transform each frame of the file
         frame_ffts = []
 
-        # The first and last frames are omitted since they are
-        # typically of different lengths than the rest of the file
-        start_frame, end_frame = (1, len(self.frames) - 1)
+        # The first 1 and last 2 frames are omitted since they are
+        # frequently of different lengths than the rest of the file
+        start_frame, end_frame = (1, len(self.frames) - 2)
         for i in range(start_frame, end_frame):
             # Decode the frame (stored as a byte array)
             # into a numpy uint16 array
