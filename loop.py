@@ -114,7 +114,7 @@ class MusicFile:
         for start in range(200, len(self.max_freq) - test_len,
                 int(len(self.max_freq) / 10)):
             for end in range(start + 500, len(self.max_freq) - test_len):
-                sc = self.pct_match(start, end, test_len)
+                sc = self.sig_corr(start, end, test_len)
                 if sc > max_corr:
                     best_start = start
                     best_end = end
