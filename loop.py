@@ -80,10 +80,10 @@ class MusicFile:
 
     def sig_corr(self, s1, s2, comp_length):
         """Calculates the auto-correlation of the track (as compressed into
-        max_freq with itself, based on sub-samples starting at frames
+        max_freq) with itself, based on sub-samples starting at frames
         s1 and s2, each comp_length frames long."""
 
-        # np.corrcoeff returns an array of coefficients - 
+        # np.corrcoef returns an array of coefficients -
         # the simple 'R' value is at row 1, col 0
         return np.corrcoef(
                 self.max_freq[s1:s1+comp_length],
