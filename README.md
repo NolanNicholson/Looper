@@ -11,6 +11,9 @@ you can install any needed packages using the following command:
 pip install -r requirements.txt
 ```
 
+This program also requires the external library `mpg123`, which is available
+here: https://www.mpg123.de/download.shtml
+
 ## Usage
 Looper is run from the command line as follows:
 
