@@ -36,10 +36,10 @@ class MusicFile:
         start_frame, end_frame = (1, len(self.frames) - 2)
         for i in range(start_frame, end_frame):
             # Decode the frame (stored as a byte array)
-            # into a numpy uint16 array
+            # into a numpy int16 array
             # (NOTE: this assumes a 16-bit encoding, which was true
             # for the files tested, but won't necessarily always be true
-            arr = np.frombuffer(self.frames[i], dtype=np.uint16)
+            arr = np.frombuffer(self.frames[i], dtype=np.int16)
 
             # Take just the first channel, so that we only need
             # to work with one time series
