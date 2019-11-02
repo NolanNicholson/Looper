@@ -1,6 +1,8 @@
 import os
 import sys
 import numpy as np
+import lameenc
+import argparse
 from mpg123 import Mpg123, Out123
 
 class MusicFile:
@@ -21,6 +23,13 @@ class MusicFile:
 
         # Get the metadata from the mp3 file
         self.rate, self.channels, self.encoding = mp3.get_format()
+
+        samples_per_sec = self.rate * self.channels
+
+        # NOTE: division by 2 assumes 16-bit encoding
+        samples_per_frame = len(self.frames[1]) / 2
+
+        self.frames_per_sec = samples_per_sec / samples_per_frame
 
     def calculate_max_frequencies(self):
         """Uses the real Fourier transform to get the frequencies over
@@ -123,13 +132,7 @@ class MusicFile:
         return (best_start, best_end, max_corr)
 
     def time_of_frame(self, frame):
-        samples_per_sec = self.rate * self.channels
-
-        # NOTE: division by 2 assumes 16-bit encoding
-        samples_per_frame = len(self.frames[1]) / 2
-
-        frames_per_sec = samples_per_sec / samples_per_frame
-        time_sec = frame / frames_per_sec
+        time_sec = frame / self.frames_per_sec
 
         return "{:02.0f}:{:06.3f}".format(
                 time_sec // 60,
@@ -149,18 +152,38 @@ class MusicFile:
         except KeyboardInterrupt:
             print() # so that the program ends on a newline
 
+    def save_loop(self, start_offset, loop_offset, filename, seconds=3600):
+        encoder = lameenc.Encoder()
+        encoder.set_in_sample_rate(self.rate)
+        encoder.set_channels(self.channels)
+        encoder.set_quality(2)
 
-def loop_track(filename):
+        with open(filename, 'wb') as file:
+            i = 0
+            for _ in range(round(seconds * self.frames_per_sec)):
+                file.write(encoder.encode(self.frames[i]))
+                i += 1
+                if i == loop_offset:
+                    i = start_offset
+
+            file.write(encoder.flush())
+
+def loop_track(filename, destination="", seconds=0):
     try:
-        # Load the file 
+        # Load the file
         print("Loading {}...".format(filename))
         track = MusicFile(filename)
         track.calculate_max_frequencies()
         start_offset, best_offset, best_corr = track.find_loop_point()
-        print("Playing with loop from {} back to {} ({:.0f}% match)".format(
+        print("Found loop from {} back to {} ({:.0f}% match)".format(
             track.time_of_frame(best_offset),
             track.time_of_frame(start_offset),
             best_corr * 100))
+
+        if destination:
+            print("(saving loop to {})".format(destination))
+            return track.save_loop(start_offset, best_offset, destination, seconds)
+
         print("(press Ctrl+C to exit)")
         track.play_looping(start_offset, best_offset)
 
@@ -168,10 +191,21 @@ def loop_track(filename):
         print("Error: {}".format(e))
 
 
+def parse_args():
+    parser = argparse.ArgumentParser(description="A script for repeating music seamlessly and endlessly")
+    parser.add_argument("source", help="ex. file.mp3")
+    parser.add_argument("-o", "--output", dest="output",
+                        help="Write loop to a filename")
+    parser.add_argument("-s", "--seconds", dest="seconds", type=int, default=3600,
+                        help="Seconds to write")
+
+    return parser.parse_args()
+
+
 if __name__ == '__main__':
-    # Load the file
-    if len(sys.argv) == 2:
-        loop_track(sys.argv[1])
+    args = parse_args()
+
+    if args.output:
+        loop_track(args.source, args.output, args.seconds)
     else:
-        print("Error: No file specified.",
-                "\nUsage: python3 loop.py file.mp3")
+        loop_track(args.source)
