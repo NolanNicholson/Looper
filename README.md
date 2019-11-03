@@ -25,6 +25,11 @@ If track.mp3 is a valid .mp3 file, then Looper will find as good a loop
 point as it can, and will then play the song on repeat, forever.
 (The program can be terminated using Ctrl+C.)
 
+In order to save the loop stretched to an hour run:
+```sh
+python3 loop.py track.mp3 -o loop.mp3 -s 3600
+```
+
 ## Limitations
 At this point, Looper only supports .mp3 files.
 If you would like to see support for other audio formats,
