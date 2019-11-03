@@ -3,6 +3,7 @@ import sys
 import numpy as np
 import lameenc
 import argparse
+from tqdm import tqdm
 from mpg123 import Mpg123, Out123
 
 class MusicFile:
@@ -152,27 +153,37 @@ class MusicFile:
         except KeyboardInterrupt:
             print() # so that the program ends on a newline
 
-    def save_loop(self, start_offset, loop_offset, filename, seconds=3600):
+    def save_loop(self, start_offset, loop_offset, output_path,
+                  loop_seconds=3600):
+
         encoder = lameenc.Encoder()
         encoder.set_in_sample_rate(self.rate)
         encoder.set_channels(self.channels)
+        encoder.set_bit_rate(320)
         encoder.set_quality(2)
 
-        with open(filename, 'wb') as file:
+        frames_to_write = round(loop_seconds * self.frames_per_sec)
+
+        progress = tqdm(total=frames_to_write, unit="frames")
+        with open(output_path, 'wb') as file:
             i = 0
-            for _ in range(round(seconds * self.frames_per_sec)):
+
+            # NOTE some precision on the buffer's length might help
+            for _ in range(frames_to_write):
                 file.write(encoder.encode(self.frames[i]))
+                progress.update(1)
+
                 i += 1
                 if i == loop_offset:
                     i = start_offset
 
             file.write(encoder.flush())
 
-def loop_track(filename, destination="", seconds=0):
+def loop_track(source_path, output_path="", loop_seconds=600):
     try:
         # Load the file
-        print("Loading {}...".format(filename))
-        track = MusicFile(filename)
+        print("Loading {}...".format(source_path))
+        track = MusicFile(source_path)
         track.calculate_max_frequencies()
         start_offset, best_offset, best_corr = track.find_loop_point()
         print("Found loop from {} back to {} ({:.0f}% match)".format(
@@ -180,11 +191,12 @@ def loop_track(filename, destination="", seconds=0):
             track.time_of_frame(start_offset),
             best_corr * 100))
 
-        if destination:
-            print("(saving loop to {})".format(destination))
-            return track.save_loop(start_offset, best_offset, destination, seconds)
+        if output_path:
+            print("Saving to {}...".format(output_path))
+            return track.save_loop(
+                start_offset, best_offset, output_path, loop_seconds)
 
-        print("(press Ctrl+C to exit)")
+        print("(press Ctrl+C to stop playback)")
         track.play_looping(start_offset, best_offset)
 
     except (TypeError, FileNotFoundError) as e:
@@ -192,12 +204,15 @@ def loop_track(filename, destination="", seconds=0):
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(description="A script for repeating music seamlessly and endlessly")
-    parser.add_argument("source", help="ex. file.mp3")
-    parser.add_argument("-o", "--output", dest="output",
-                        help="Write loop to a filename")
-    parser.add_argument("-s", "--seconds", dest="seconds", type=int, default=3600,
-                        help="Seconds to write")
+    parser = argparse.ArgumentParser(
+        description="A script for repeating music seamlessly and endlessly")
+    parser.add_argument(
+        "source_path", type=str, help="Source file, example: file.mp3")
+    parser.add_argument(
+        "-o", "--output", dest="output_path", type=str, help="Output filepath")
+    parser.add_argument(
+        "-s", "--seconds", dest="loop_seconds",
+        type=int, default=600, help="Amount of seconds to loop")
 
     return parser.parse_args()
 
@@ -205,7 +220,7 @@ def parse_args():
 if __name__ == '__main__':
     args = parse_args()
 
-    if args.output:
-        loop_track(args.source, args.output, args.seconds)
+    if not args.output_path:
+        loop_track(args.source_path)
     else:
-        loop_track(args.source)
+        loop_track(args.source_path, args.output_path, args.loop_seconds)
