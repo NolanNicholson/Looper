@@ -29,7 +29,10 @@ Download it from [here](https://www.ffmpeg.org/download.html) and add the execut
 Looper is run from the command line as follows:
 
 ```sh
-python3 loop.py track.mp3 [--backend=mpg123(default)/audioread]
+$ python3 -m looper track.mp3
+
+# switch backend to `audioread` (default: `mpg123`)
+$ python3 -m looper track.mp3 --backend=audioread
 ```
 
 If track.mp3 is a valid .mp3 file, then Looper will find as good a loop
