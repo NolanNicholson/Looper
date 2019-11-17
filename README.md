@@ -8,17 +8,28 @@ Once you have Python 3 installed, and this repository cloned or downloaded,
 you can install any needed packages using the following command:
 
 ```sh
-pip install -r requirements.txt
+$ pip install git+https://github.com/NolanNicholson/Looper.git
 ```
 
 This program also requires the external library `mpg123`, which is available
 here: https://www.mpg123.de/download.shtml
 
+### Alternative to `mpg123`
+If you want to use `audioread` as the dependency to read `.mp3` files, you
+you can install this package by this command:
+
+```sh
+$ pip install git+https://github.com/NolanNicholson/Looper.git --global-option='--backend_audioread'
+```
+
+Besides, you need to make sure `ffmpeg` is available on your machine.
+Download it from [here](https://www.ffmpeg.org/download.html) and add the executable to `$PATH`.
+
 ## Usage
 Looper is run from the command line as follows:
 
 ```sh
-python3 loop.py track.mp3
+python3 loop.py track.mp3 [--backend=mpg123(default)/audioread]
 ```
 
 If track.mp3 is a valid .mp3 file, then Looper will find as good a loop
