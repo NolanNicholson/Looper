@@ -1,26 +1,36 @@
+from argparse import ArgumentParser
 import os
 import sys
 import numpy as np
-from mpg123 import Mpg123, Out123
+from audiofile import (MPG123File, AudioreadFile)
+
+
+AUDIOFILE_DICT = {
+    'mpg123': MPG123File,
+    'audioread': AudioreadFile,
+}
+
+SUPPORTED_EXTENSION = ['.mp3']
+
 
 class MusicFile:
-    def __init__(self, filename):
+    def __init__(self, filename, backend='mpg123'):
         # Load the file, if it exists and is an mp3 file
         if os.path.exists(filename) and os.path.isfile(filename):
-            if filename[-3:].lower() == 'mp3':
-                mp3 = Mpg123(filename)
-            else:
+            _, ext = os.path.splitext(filename)
+            if ext not in SUPPORTED_EXTENSION:
                 raise TypeError(
                         "This script can currently only handle MP3 files.")
         else:
             raise FileNotFoundError("Specified file not found.")
 
-        # Get the waveform data from the mp3 file
-        frames = list(mp3.iter_frames())
-        self.frames = frames
+        if backend not in AUDIOFILE_DICT:
+            raise ValueError('Specified backend is not available.')
 
-        # Get the metadata from the mp3 file
-        self.rate, self.channels, self.encoding = mp3.get_format()
+        self.audiofile = AUDIOFILE_DICT[backend]()
+        self.rate, self.channels, self.encoding = self.audiofile.read(filename)
+
+        self.frames = self.audiofile.frames
 
     def calculate_max_frequencies(self):
         """Uses the real Fourier transform to get the frequencies over
@@ -137,17 +147,7 @@ class MusicFile:
                 )
 
     def play_looping(self, start_offset, loop_offset):
-        out = Out123()
-        out.start(self.rate, self.channels, self.encoding)
-        i = 0
-        try:
-            while True:
-                out.play(self.frames[i])
-                i += 1
-                if i == loop_offset:
-                    i = start_offset
-        except KeyboardInterrupt:
-            print() # so that the program ends on a newline
+        self.audiofile.play(start_offset, loop_offset, loop=True)
 
 
 def loop_track(filename):
@@ -168,10 +168,20 @@ def loop_track(filename):
         print("Error: {}".format(e))
 
 
+def parse_args():
+    parser = ArgumentParser()
+    parser.add_argument('filename', type=str, help='Input file')
+    parser.add_argument('--backend', type=str, default='mpg123',
+        help='Backend for reading audio file')
+    return parser.parse_args()
+
+
 if __name__ == '__main__':
     # Load the file
-    if len(sys.argv) == 2:
-        loop_track(sys.argv[1])
-    else:
+    args = parse_args()
+
+    if not os.path.exists(args.filename):
         print("Error: No file specified.",
                 "\nUsage: python3 loop.py file.mp3")
+
+    loop_track(args.filename)        
