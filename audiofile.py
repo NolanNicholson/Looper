@@ -1,6 +1,28 @@
 import numpy as np
-from mpg123 import Mpg123, Out123
-import audioread as ar
+
+
+class NotInstalledDependency:
+    def __init__(self, name):
+        self.msg = '`{}` is not installed'.format(name)
+
+    def __call__(self, *args, **kwargs):
+        raise ImportError(self.msg)
+
+    def __getattr__(self, x):
+        raise ImportError(self.msg)
+
+
+try:
+    import mpg123
+    from mpg123 import Mpg123, Out123
+except ImportError:
+    Mpg123 = NotInstalledDependency('mpg123')
+    Out123 = NotInstalledDependency('mpg123')
+
+try:
+    import audioread as ar
+except ImportError:
+    ar = NotInstalledDependency('audioread')
 
 
 class BasicAudioFile:
@@ -60,9 +82,6 @@ class AudioreadFile(BasicAudioFile):
 
         dat = b''.join(self.frames[start:end])
         ndat = np.frombuffer(dat, '<i2').reshape((-1, 2))
-
-        memory_file = io.BytesIO()
-        scipy.io.wavfile.write(memory_file, self.rate, ndat)
 
         self.wave_intro = WaveObject.from_wave_file(
             self._to_memory_file(0, end)
