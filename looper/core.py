@@ -12,7 +12,7 @@ SUPPORTED_EXTENSION = ['.mp3']
 
 
 class MusicFile:
-    def __init__(self, filename, backend='mpg123'):
+    def __init__(self, filename, backend):
         # Load the file, if it exists and is an mp3 file
         if os.path.exists(filename) and os.path.isfile(filename):
             _, ext = os.path.splitext(filename)

@@ -25,6 +25,13 @@ $ pip install git+https://github.com/NolanNicholson/Looper.git --global-option='
 Besides, you need to make sure `ffmpeg` is available on your machine.
 Download it from [here](https://www.ffmpeg.org/download.html) and add the executable to `$PATH`.
 
+## Configuration
+To switch the backend to be used, please use the following command:
+
+```sh
+$ python -m looper config backend=[mpg123/audioread]
+```
+
 ## Usage
 Looper is run from the command line as follows:
 
