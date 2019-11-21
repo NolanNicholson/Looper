@@ -1,26 +1,34 @@
 import os
-import sys
 import numpy as np
-from mpg123 import Mpg123, Out123
+from .audiofile import (MPG123File, AudioreadFile)
+
+
+AUDIOFILE_DICT = {
+    'mpg123': MPG123File,
+    'audioread': AudioreadFile,
+}
+
+SUPPORTED_EXTENSION = ['.mp3']
+
 
 class MusicFile:
-    def __init__(self, filename):
+    def __init__(self, filename, backend):
         # Load the file, if it exists and is an mp3 file
         if os.path.exists(filename) and os.path.isfile(filename):
-            if filename[-3:].lower() == 'mp3':
-                mp3 = Mpg123(filename)
-            else:
+            _, ext = os.path.splitext(filename)
+            if ext not in SUPPORTED_EXTENSION:
                 raise TypeError(
                         "This script can currently only handle MP3 files.")
         else:
             raise FileNotFoundError("Specified file not found.")
 
-        # Get the waveform data from the mp3 file
-        frames = list(mp3.iter_frames())
-        self.frames = frames
+        if backend not in AUDIOFILE_DICT:
+            raise ValueError('Specified backend is not available.')
 
-        # Get the metadata from the mp3 file
-        self.rate, self.channels, self.encoding = mp3.get_format()
+        self.audiofile = AUDIOFILE_DICT[backend]()
+        self.rate, self.channels, self.encoding = self.audiofile.read(filename)
+
+        self.frames = self.audiofile.frames
 
     def calculate_max_frequencies(self):
         """Uses the real Fourier transform to get the frequencies over
@@ -111,14 +119,17 @@ class MusicFile:
         best_start = None
         best_end = None
 
-        for start in range(200, len(self.max_freq) - test_len,
+        for start in range(start_offset, len(self.max_freq) - test_len,
                 int(len(self.max_freq) / 10)):
-            for end in range(start + 500, len(self.max_freq) - test_len):
+            for end in range(start + test_len, len(self.max_freq) - test_len):
                 sc = self.sig_corr(start, end, test_len)
                 if sc > max_corr:
                     best_start = start
                     best_end = end
                     max_corr = sc
+
+        if best_start is None or best_end is None:
+            raise RuntimeError('Failed to find a loop point.')
 
         return (best_start, best_end, max_corr)
 
@@ -136,42 +147,13 @@ class MusicFile:
                 time_sec % 60
                 )
 
+    def time_to_frame(self, time_sec):
+        """Convert time (unit: second) to frame."""
+        samples_per_sec = self.rate * self.channels
+        samples_per_frame = len(self.frames[1]) / 2
+        frames_per_sec = samples_per_sec / samples_per_frame
+        frame = int(np.ceil(time_sec * frames_per_sec))
+        return frame
+
     def play_looping(self, start_offset, loop_offset):
-        out = Out123()
-        out.start(self.rate, self.channels, self.encoding)
-        i = 0
-        try:
-            while True:
-                out.play(self.frames[i])
-                i += 1
-                if i == loop_offset:
-                    i = start_offset
-        except KeyboardInterrupt:
-            print() # so that the program ends on a newline
-
-
-def loop_track(filename):
-    try:
-        # Load the file 
-        print("Loading {}...".format(filename))
-        track = MusicFile(filename)
-        track.calculate_max_frequencies()
-        start_offset, best_offset, best_corr = track.find_loop_point()
-        print("Playing with loop from {} back to {} ({:.0f}% match)".format(
-            track.time_of_frame(best_offset),
-            track.time_of_frame(start_offset),
-            best_corr * 100))
-        print("(press Ctrl+C to exit)")
-        track.play_looping(start_offset, best_offset)
-
-    except (TypeError, FileNotFoundError) as e:
-        print("Error: {}".format(e))
-
-
-if __name__ == '__main__':
-    # Load the file
-    if len(sys.argv) == 2:
-        loop_track(sys.argv[1])
-    else:
-        print("Error: No file specified.",
-                "\nUsage: python3 loop.py file.mp3")
+        self.audiofile.play(start_offset, loop_offset, loop=True)
