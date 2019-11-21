@@ -41,7 +41,7 @@ def parse_args():
                         found = True
             if not found:
                 if args is None:
-                    sys.argv.insert(len(sys.argv) - positional_args, name)
+                    sys.argv.insert(1, name)
                 else:
                     args.insert(len(args) - positional_args, name)
 
