@@ -119,14 +119,17 @@ class MusicFile:
         best_start = None
         best_end = None
 
-        for start in range(200, len(self.max_freq) - test_len,
+        for start in range(start_offset, len(self.max_freq) - test_len,
                 int(len(self.max_freq) / 10)):
-            for end in range(start + 500, len(self.max_freq) - test_len):
+            for end in range(start + test_len, len(self.max_freq) - test_len):
                 sc = self.sig_corr(start, end, test_len)
                 if sc > max_corr:
                     best_start = start
                     best_end = end
                     max_corr = sc
+
+        if best_start is None or best_end is None:
+            raise RuntimeError('Failed to find a loop point.')
 
         return (best_start, best_end, max_corr)
 
@@ -143,6 +146,14 @@ class MusicFile:
                 time_sec // 60,
                 time_sec % 60
                 )
+
+    def time_to_frame(self, time_sec):
+        """Convert time (unit: second) to frame."""
+        samples_per_sec = self.rate * self.channels
+        samples_per_frame = len(self.frames[1]) / 2
+        frames_per_sec = samples_per_sec / samples_per_frame
+        frame = int(np.ceil(time_sec * frames_per_sec))
+        return frame
 
     def play_looping(self, start_offset, loop_offset):
         self.audiofile.play(start_offset, loop_offset, loop=True)

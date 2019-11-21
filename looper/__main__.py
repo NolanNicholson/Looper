@@ -8,13 +8,15 @@ from .config import LooperConfig
 CONFIG = LooperConfig.load()
 
 
-def loop_track(filename, backend):
+def loop_track(filename, backend=CONFIG.backend, start_time=200):
     try:
         # Load the file 
         print("Loading {}...".format(filename))
         track = MusicFile(filename, backend)
         track.calculate_max_frequencies()
-        start_offset, best_offset, best_corr = track.find_loop_point()
+        start_offset, best_offset, best_corr = track.find_loop_point(
+            start_offset=track.time_to_frame(start_time),
+        )
         print("Playing with loop from {} back to {} ({:.0f}% match)".format(
             track.time_of_frame(best_offset),
             track.time_of_frame(start_offset),
@@ -54,6 +56,8 @@ def parse_args():
     parser_run.add_argument('filename', type=str, help='Input file')
     parser_run.add_argument('--backend', type=str, default=CONFIG.backend,
         help='Backend for reading audio file')
+    parser_run.add_argument('--start_time', type=int, default=10,
+        help='Start time (unit: second) for searching a loop point')
 
     parser_config = subparsers.add_parser('config')
     parser_config.add_argument('settings', nargs=REMAINDER)
@@ -87,8 +91,8 @@ if __name__ == '__main__':
         update_configuration(args.settings)
         exit()
 
-    if not os.path.exists(args.filename):
-        print("Error: No file specified.",
-                "\nUsage: python3 loop.py file.mp3")
-
-    loop_track(args.filename, backend=args.backend)
+    loop_track(
+        args.filename,
+        backend=args.backend,
+        start_time=args.start_time,
+    )

@@ -38,8 +38,11 @@ Looper is run from the command line as follows:
 ```sh
 $ python3 -m looper track.mp3
 
+# find a loop point start from the given time (unit: second), e.g. starts from 30 second
+$ python3 -m looper track.mp3 --start_time 30
+
 # switch backend to `audioread` (default: `mpg123`)
-$ python3 -m looper track.mp3 --backend=audioread
+$ python3 -m looper track.mp3 --backend audioread
 ```
 
 If track.mp3 is a valid .mp3 file, then Looper will find as good a loop
